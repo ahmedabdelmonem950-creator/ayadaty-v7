@@ -1,3 +1,4 @@
+
 name: Build APK
 
 on:
@@ -37,9 +38,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Set up Android
-        uses: android-actions/setup-android@v3
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
