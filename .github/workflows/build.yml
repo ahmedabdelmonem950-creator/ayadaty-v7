@@ -1,0 +1,60 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unzip Android project
+        shell: bash
+        run: |
+          set -e
+          mkdir -p appsrc
+          ZIP="$(find . -maxdepth 1 -type f -name '*.zip' | head -n 1)"
+          if [ -z "$ZIP" ]; then
+            echo "ZIP not found"
+            exit 1
+          fi
+          unzip -q "$ZIP" -d appsrc
+          ROOT="$(find appsrc -type f \( -name settings.gradle -o -name settings.gradle.kts -o -name build.gradle -o -name build.gradle.kts \) -print -quit | xargs -r dirname)"
+          if [ -z "$ROOT" ]; then
+            echo "Gradle project not found"
+            exit 1
+          fi
+          echo "PROJECT_ROOT=$ROOT" >> "$GITHUB_ENV"
+          echo "Project root: $ROOT"
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '8.9'
+
+      - name: Build APK
+        working-directory: ${{ env.PROJECT_ROOT }}
+        run: gradle assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ayadaty-v7-debug
+          path: |
+            ${{ env.PROJECT_ROOT }}/**/build/outputs/apk/**/*.apk
+            ${{ env.PROJECT_ROOT }}/**/build/outputs/apk/*.apk
+          if-no-files-found: error
